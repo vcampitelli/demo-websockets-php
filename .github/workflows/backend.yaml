@@ -1,0 +1,53 @@
+name: Backend
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yaml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@a99dd2408ee49ad5ec08301260877b88a87e6a03
+
+      - name: Validando dependências
+        run: composer validate --strict
+
+      - name: Cache do Composer
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Instalando dependências
+        run: composer install --prefer-dist --no-progress
+
+      - name: Executando PHPCS
+        run: composer run phpcs
+
+      - name: Executando PHPMD
+        run: composer run phpmd
+
+      - name: Executando PHPStan
+        run: composer run phpstan

@@ -10,6 +10,12 @@ use Ratchet\ConnectionInterface;
 
 class Logger
 {
+    /**
+     * @param ConnectionInterface $connection
+     * @param string|array<string> $messages
+     * @param Properties|null $properties
+     * @return void
+     */
     public function log(
         ConnectionInterface $connection,
         string|array $messages,

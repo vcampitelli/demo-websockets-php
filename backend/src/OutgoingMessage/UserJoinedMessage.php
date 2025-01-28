@@ -16,6 +16,9 @@ readonly class UserJoinedMessage extends Message
     ) {
     }
 
+    /**
+     * @return array{'from': array{'id': ResourceId, 'username': string, 'color': \App\Color\Color}}
+     */
     public function toArray(): array
     {
         return [

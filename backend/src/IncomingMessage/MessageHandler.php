@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\IncomingMessage;
 
 use App\Logger;
-use App\OutgoingMessage\ChatHistoryMessage;
-use App\OutgoingMessage\UserJoinedMessage;
+use App\Repository\ChatHistoryRepository;
+use App\Repository\ConnectedClientsRepository;
+use App\Repository\PendingClientsRepository;
 use DomainException;
 use Ratchet\ConnectionInterface;
 
@@ -17,17 +18,20 @@ readonly class MessageHandler
     private ChatMessageHandler $chatMessageHandler;
 
     public function __construct(
-        \SplObjectStorage $pendingAuthenticationClients,
-        \SplObjectStorage $connectedClients,
+        PendingClientsRepository $pendingClientsRepository,
+        ConnectedClientsRepository $connectedClientsRepository,
+        ChatHistoryRepository $chatHistoryRepository,
         Logger $logger,
     ) {
         $this->handshakeMessageHandler = new HandshakeMessageHandler(
-            pendingAuthenticationClients: $pendingAuthenticationClients,
-            connectedClients: $connectedClients,
+            pendingClientsRepository: $pendingClientsRepository,
+            connectedClientsRepository: $connectedClientsRepository,
+            chatHistoryRepository: $chatHistoryRepository,
             logger: $logger,
         );
         $this->chatMessageHandler = new ChatMessageHandler(
-            connectedClients: $connectedClients,
+            connectedClientsRepository: $connectedClientsRepository,
+            chatHistoryRepository: $chatHistoryRepository,
             logger: $logger,
         );
     }

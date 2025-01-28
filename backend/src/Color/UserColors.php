@@ -48,7 +48,7 @@ class UserColors
         $color = \current($this->colors);
 
         // Pegamos a próxima cor
-        if ($color !== null) {
+        if ($color !== false) {
             \next($this->colors);
             return $color;
         }

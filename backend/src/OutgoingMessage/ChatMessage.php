@@ -6,7 +6,6 @@ namespace App\OutgoingMessage;
 
 use App\Connection\Properties;
 use App\Connection\ResourceId;
-use App\IncomingMessage\MessageHandler;
 use Ratchet\ConnectionInterface;
 
 readonly class ChatMessage extends Message
@@ -19,6 +18,9 @@ readonly class ChatMessage extends Message
     ) {
     }
 
+    /**
+     * @return array{'id': int, 'from': array{'id': ResourceId, 'username': string, 'color': \App\Color\Color}}
+     */
     public function toArray(): array
     {
         return [

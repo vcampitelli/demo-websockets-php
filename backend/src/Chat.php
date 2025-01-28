@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App;
 
-use App\Connection\Properties;
-use App\Connection\ResourceId;
 use App\IncomingMessage\MessageHandler;
-use App\OutgoingMessage\ChatMessage;
 use App\OutgoingMessage\UserLeftMessage;
+use App\Repository\ChatHistoryRepository;
+use App\Repository\ConnectedClientsRepository;
+use App\Repository\PendingClientsRepository;
 use Ratchet\ConnectionInterface;
 use Ratchet\MessageComponentInterface;
-use SplObjectStorage;
 
 class Chat implements MessageComponentInterface
 {
@@ -22,25 +21,28 @@ class Chat implements MessageComponentInterface
     private MessageHandler $incomingMessageHandler;
 
     /**
-     * @param SplObjectStorage<ConnectionInterface, null> $pendingAuthenticationClients Guarda os clientes que ainda não
-     *                                                                                  se identificaram
-     * @param SplObjectStorage<ConnectionInterface, Properties> $connectedClients Guarda os clientes identificados
+     * @param PendingClientsRepository $pendingClientsRepository Guarda clientes que ainda não se identificaram
+     * @param ConnectedClientsRepository $connectedClientsRepository Guarda clientes identificados
+     * @param ChatHistoryRepository $chatHistoryRepository Guarda o histórico de mensagens enviadas
+     * @param Logger $logger Objeto para fazer o logging
      */
     public function __construct(
-        private readonly SplObjectStorage $pendingAuthenticationClients,
-        private readonly SplObjectStorage $connectedClients,
+        private readonly PendingClientsRepository $pendingClientsRepository,
+        private readonly ConnectedClientsRepository $connectedClientsRepository,
+        ChatHistoryRepository $chatHistoryRepository,
         private readonly Logger $logger,
     ) {
         $this->incomingMessageHandler = new MessageHandler(
-            pendingAuthenticationClients: $this->pendingAuthenticationClients,
-            connectedClients: $this->connectedClients,
+            pendingClientsRepository: $pendingClientsRepository,
+            connectedClientsRepository: $connectedClientsRepository,
+            chatHistoryRepository: $chatHistoryRepository,
             logger: $this->logger,
         );
     }
 
     public function onOpen(ConnectionInterface $conn): void
     {
-        $this->pendingAuthenticationClients->attach($conn);
+        $this->pendingClientsRepository->add($conn);
         $this->logger->log($conn, 'Nova conexão criada');
     }
 
@@ -61,31 +63,31 @@ class Chat implements MessageComponentInterface
 
     public function onClose(ConnectionInterface $conn): void
     {
-        $this->pendingAuthenticationClients->detach($conn);
-        if (!$this->connectedClients->contains($conn)) {
+        $this->pendingClientsRepository->remove($conn);
+        if (!$this->connectedClientsRepository->has($conn)) {
             return;
         }
 
-        $properties = $this->connectedClients->offsetGet($conn);
+        $properties = $this->connectedClientsRepository->get($conn);
         $this->logger->log($conn, 'Saindo do chat', $properties);
-        $this->connectedClients->detach($conn);
+        $this->connectedClientsRepository->remove($conn);
 
         $jsonMessage = \json_encode(
             new UserLeftMessage($conn, $properties)
         );
-        foreach ($this->connectedClients as $client) {
+        foreach ($this->connectedClientsRepository as $client) {
             $client->send($jsonMessage);
         }
     }
 
     public function onError(ConnectionInterface $conn, \Exception $e): void
     {
-        $properties = ($this->connectedClients->contains($conn))
-            ? $this->connectedClients->offsetGet($conn)
+        $properties = ($this->connectedClientsRepository->has($conn))
+            ? $this->connectedClientsRepository->get($conn)
             : null;
 
-        $this->pendingAuthenticationClients->detach($conn);
-        $this->connectedClients->detach($conn);
+        $this->pendingClientsRepository->remove($conn);
+        $this->connectedClientsRepository->remove($conn);
 
         $this->logger->log($conn, "Erro na conexão: {$e->getMessage()}", $properties);
 

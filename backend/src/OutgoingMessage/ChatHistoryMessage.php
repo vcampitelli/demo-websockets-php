@@ -4,21 +4,22 @@ declare(strict_types=1);
 
 namespace App\OutgoingMessage;
 
+use App\Repository\ChatHistoryRepository;
+
 readonly class ChatHistoryMessage extends Message
 {
-    /**
-     * @param array<ChatMessage> $messages
-     */
     public function __construct(
-        private array $messages
+        private ChatHistoryRepository $chatHistoryRepository,
     ) {
-        // @TODO check for ChatMessage
     }
 
+    /**
+     * @return array{'messages': array<ChatMessage>}
+     */
     public function toArray(): array
     {
         return [
-            'messages' => $this->messages,
+            'messages' => $this->chatHistoryRepository->all(),
         ];
     }
 
